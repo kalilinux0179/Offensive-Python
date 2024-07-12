@@ -28,8 +28,8 @@ def run_server(host_name, host_port):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simple HTTP Server with Command Input")
-    parser.add_argument('--host', default='127.0.0.1', help='Host to bind the server (default: 127.0.0.1)')
-    parser.add_argument('--port', type=int, default=9999, help='Port to bind the server (default: 9999)')
+    parser.add_argument('host', default='127.0.0.1', help='Host to bind the server (default: 127.0.0.1)')
+    parser.add_argument('port', type=int, default=9999, help='Port to bind the server (default: 9999)')
     
     args = parser.parse_args()
 

